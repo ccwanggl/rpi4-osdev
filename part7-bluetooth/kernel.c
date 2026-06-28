@@ -147,6 +147,48 @@ void bt_conn()
     }
 }
 
+void send_spec_compliant_error(unsigned int conn_handle, unsigned char offending_opcode, unsigned int echo_handle) {
+    unsigned char reply[14];
+    
+    reply[0] = 0x02; // HCI ACL Packet Type
+
+    // Set PB Flag to 0x2 (First automatically flushable fragment)
+    unsigned int handle_flags = (conn_handle & 0x0FFF) | 0x2000; 
+    reply[1] = handle_flags & 0xFF;
+    reply[2] = (handle_flags >> 8) & 0xFF;
+    
+    // HCI Trailing Length = 9 bytes
+    reply[3] = 0x09; 
+    reply[4] = 0x00;
+    
+    // L2CAP Length = 5 bytes
+    reply[5] = 0x05; 
+    reply[6] = 0x00;
+    
+    // L2CAP Channel: 0x0004 (ATT)
+    reply[7] = 0x04; 
+    reply[8] = 0x00;
+    
+    // --- ATT Payload ---
+    reply[9] = 0x01; // ATT_ERROR_RSP
+    reply[10] = offending_opcode; // 0x10
+    
+    // CRITICAL: Mirror the exact handle requested back to the Mac
+    reply[11] = echo_handle & 0xFF; 
+    reply[12] = (echo_handle >> 8) & 0xFF;
+    
+    // Error Code: 0x0A = Attribute Not Found
+    // This explicitly tells the Mac "There are no services starting at this handle"
+    reply[13] = 0x0A; 
+
+    // Send the array out to the UART
+    for (int i = 0; i < 14; i++) {
+        bt_writeByte(reply[i]);
+    }
+    
+    debugstr("spec-compliant error sent!");
+}
+
 void acl_poll()
 {
     while (bt_isReadByteReady()) {
@@ -173,14 +215,20 @@ void acl_poll()
 	     unsigned int length = data[0] | (data[1] << 8);
 	     unsigned int channel = data[2] | (data[3] << 8);
 	     unsigned char opcode = data[4];
+             unsigned int target_handle = data[5] | (data[6] << 8);
 
-             if (thandle == connection_handle && length == 4 && opcode == 0x1b) {
-	        if (channel == 4 && data[5] == 0x1b && data[6] == 0x00) {
+             if (thandle == connection_handle && channel == 4) {
+                if (opcode == 0x10) {
+                   debugcrlf();
+                   debugstr("Got Mac service discovery... ");
+		   wait_msec(10);
+		   send_spec_compliant_error(thandle, 0x10, target_handle);
+                } else if (opcode == 0x1b && length == 4 && data[5] == 0x1b && data[6] == 0x00) {
                    debugcrlf();
                    debugstr("Got ACL packet... ");
-                   debugch(data[7]); 
+                   debugch(data[7]);
                 }
-	     }
+             }
           }
        }
     }
@@ -258,8 +306,8 @@ void main()
     debugcrlf();
 
     // Test out the advertising
-    // run_eddystone();
+    run_eddystone();
 
     // Test out the scanning
-    run_search();
+    // run_search();
 }
