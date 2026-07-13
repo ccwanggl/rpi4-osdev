@@ -149,6 +149,48 @@ void bt_conn()
     }
 }
 
+void send_spec_compliant_error(unsigned int conn_handle, unsigned char offending_opcode, unsigned int echo_handle) {
+    unsigned char reply[14];
+    
+    reply[0] = 0x02; // HCI ACL Packet Type
+
+    // Set PB Flag to 0x2 (First automatically flushable fragment)
+    unsigned int handle_flags = (conn_handle & 0x0FFF) | 0x2000; 
+    reply[1] = handle_flags & 0xFF;
+    reply[2] = (handle_flags >> 8) & 0xFF;
+    
+    // HCI Trailing Length = 9 bytes
+    reply[3] = 0x09; 
+    reply[4] = 0x00;
+    
+    // L2CAP Length = 5 bytes
+    reply[5] = 0x05; 
+    reply[6] = 0x00;
+    
+    // L2CAP Channel: 0x0004 (ATT)
+    reply[7] = 0x04; 
+    reply[8] = 0x00;
+    
+    // --- ATT Payload ---
+    reply[9] = 0x01; // ATT_ERROR_RSP
+    reply[10] = offending_opcode; // 0x10
+    
+    // CRITICAL: Mirror the exact handle requested back to the Mac
+    reply[11] = echo_handle & 0xFF; 
+    reply[12] = (echo_handle >> 8) & 0xFF;
+    
+    // Error Code: 0x0A = Attribute Not Found
+    // This explicitly tells the Mac "There are no services starting at this handle"
+    reply[13] = 0x0A; 
+
+    // Send the array out to the UART
+    for (int i = 0; i < 14; i++) {
+        bt_writeByte(reply[i]);
+    }
+    
+    debugstr("spec-compliant error sent!");
+}
+
 // The screen
 #define WIDTH         1920
 #define HEIGHT        1080
@@ -327,13 +369,20 @@ void acl_poll()
 	     unsigned int length = data[0] | (data[1] << 8);
 	     unsigned int channel = data[2] | (data[3] << 8);
 	     unsigned char opcode = data[4];
+             unsigned int target_handle = data[5] | (data[6] << 8);
 
-	     if (thandle == connection_handle && length == 4 && opcode == 0x1b) {
-	        if (channel == 4 && data[5] == 0x1b && data[6] == 0x00) {
-	      	   dir = data[7];
+             if (thandle == connection_handle && channel == 4) {
+                if (opcode == 0x10) {
+                   debugcrlf();
+                   debugstr("Got Mac service discovery... ");
+
+		   wait_msec(10);
+		   send_spec_compliant_error(thandle, 0x10, target_handle);
+                } else if (opcode == 0x1b && length == 4 && data[5] == 0x1b && data[6] == 0x00) {
+		   dir = data[7];
                    moveObjectAbs(paddle, MARGIN + (dir * ((VIRTWIDTH - paddlewidth + MARGIN)/100)), paddle->y);
                 }
-	     }
+             }
           }
        }
     }
@@ -357,6 +406,7 @@ void breakout()
 
     while (lives > 0 && bricks > 0) {
        acl_poll();
+       uart_update();
 
        // Are we going to hit anything?
        foundObject = detectCollision(ball, velocity_x, velocity_y);
@@ -412,6 +462,34 @@ void breakout()
     numobjs = 0;
 }
 
+void run_search(void) {
+    // Start scanning
+    debugstr("Setting event mask... ");
+    setLEeventmask(0xff);
+    debugstr("Starting scanning... ");
+    startActiveScanning();
+
+    // Search for the echo
+    debugstr("Waiting...");
+    debugcrlf();
+    while (!(got_echo_sid && got_echo_name)) bt_search();
+    stopScanning();
+    for (int c=0;c<=5;c++) debugch(echo_addr[c]);
+    debugcrlf();
+
+    // Connecting to echo
+    debugstr("Connecting to echo: ");
+    connect(echo_addr);
+    while (!connected) bt_conn();
+    debugstr("Connected!");
+    debugcrlf();
+
+    // Get the characteristic value
+    debugstr("Sending read request: ");
+    debughex(connection_handle); debugcrlf();
+    sendACLsubscribe(connection_handle);
+}
+
 void main()
 {
     fb_init();
@@ -434,35 +512,11 @@ void main()
     for (int c=5;c>=0;c--) debugch(local_addr[c]);
     debugcrlf();
 
-    // Start scanning
-    debugstr("Setting event mask... ");
-    setLEeventmask(0xff);
-    debugstr("Starting scanning... ");
-    startActiveScanning();
-
-    // Search for the echo
-    debugstr("Waiting...");
-    debugcrlf();
-    while (!(got_echo_sid && got_echo_name)) bt_search();
-    stopScanning();
-    for (int c=0;c<=5;c++) debugch(echo_addr[c]);
-    debugcrlf();
-
-    // Connecting to echo
-    debugstr("Connecting to echo: ");
-    connect(echo_addr);
-    while (!(connected && connection_handle)) bt_conn();
-    debugstr("Connected!");
-    debugcrlf();
-
-    // Subscribe to updates
-    debugstr("Sending read request: ");
-    debughex(connection_handle); debugcrlf();
-    sendACLsubscribe(connection_handle);
+    // Start searching
+    run_search();
 
     // Begin the game
     debugstr("Let the game commence...\n");
-    wait_msec(0x100000); // Wait a second
 
     while (1) breakout();
 }

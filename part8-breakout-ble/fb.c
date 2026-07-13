@@ -224,38 +224,49 @@ int strlen(const char *str) {
 }
 
 void debugstr(char *str) {
-    if (curx + (strlen(str) * 8)  >= 1920) {
-       curx = 0; cury += 8;
+    if (DEBUG == 1) {
+       if (curx + (strlen(str) * 8)  >= 1920) {
+          curx = 0; cury += 8;
+       }
+       if (cury + 8 >= 1080) {
+          cury = 0;
+       }
+       drawString(curx, cury, str, 0x0f, 1);
+       curx += (strlen(str) * 8);
     }
-    if (cury + 8 >= 1080) {
-       cury = 0;
-    }
-    if (DEBUG == 1) drawString(curx, cury, str, 0x0f, 1);
-    curx += (strlen(str) * 8);
 }
 
 void debugcrlf(void) {
-    curx = 0; cury += 8;
+    if (DEBUG == 1) {
+       curx = 0;
+       cury += 8;
+    }
 }
 
 void debugch(unsigned char b) {
     unsigned int n;
     int c;
-    for(c=4;c>=0;c-=4) {
-        n=(b>>c)&0xF;
-        n+=n>9?0x37:0x30;
-        debugstr((char *)&n);
+
+    if (DEBUG == 1) {
+       for (c=4;c>=0;c-=4) {
+          n=(b>>c)&0xF;
+          n+=n>9?0x37:0x30;
+          debugstr((char *)&n);
+       }
+       debugstr(" ");
     }
-    debugstr(" ");
 }
 
 void debughex(unsigned int d) {
     unsigned int n;
     int c;
-    for(c=28;c>=0;c-=4) {
-        n=(d>>c)&0xF;
-        n+=n>9?0x37:0x30;
-        debugstr((char *)&n);
+
+    if (DEBUG == 1) {
+       for (c=28;c>=0;c-=4) {
+           n=(d>>c)&0xF;
+           n+=n>9?0x37:0x30;
+           debugstr((char *)&n);
+       }
+       debugstr(" ");
     }
-    debugstr(" ");
 }
