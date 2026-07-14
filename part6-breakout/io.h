@@ -2,7 +2,7 @@
 #define SAFE_ADDRESS    0x00210000 // Somewhere safe to store a lot of data
 
 void uart_init();
-void uart_writeText(char *buffer);
+void uart_writeText(const char *buffer);
 void uart_loadOutputFifo();
 unsigned char uart_readByte();
 unsigned int uart_isReadByteReady();

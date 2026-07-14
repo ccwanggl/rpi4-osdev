@@ -1,7 +1,7 @@
 #define PERIPHERAL_BASE 0xFE000000
 
 void uart_init();
-void uart_writeText(char *buffer);
+void uart_writeText(const char *buffer);
 void uart_loadOutputFifo();
 unsigned char uart_readByte();
 unsigned int uart_isReadByteReady();

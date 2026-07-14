@@ -109,7 +109,7 @@ Let's now create _io.h_ with the following contents:
 
 ```c
 void uart_init();
-void uart_writeText(char *buffer);
+void uart_writeText(const char *buffer);
 ```
 
 This is a very short file with two **function definitions**. `uart_init()` is a **void function** with no **parameters**, just like `main()` is. This means that it doesn't need any data from the caller to do its job, and it doesn't send any data back to the caller when it's done. You'll note that `uart_writeText` is also a void function, but it does take a parameter since we need to tell it what text to write!
@@ -207,7 +207,7 @@ void uart_writeByteBlockingActual(unsigned char ch) {
     mmio_write(AUX_MU_IO_REG, (unsigned int)ch);
 }
 
-void uart_writeText(char *buffer) {
+void uart_writeText(const char *buffer) {
     while (*buffer) {
        if (*buffer == '\n') uart_writeByteBlockingActual('\r');
        uart_writeByteBlockingActual(*buffer++);

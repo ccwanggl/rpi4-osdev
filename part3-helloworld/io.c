@@ -88,7 +88,7 @@ void uart_writeByteBlockingActual(unsigned char ch) {
     mmio_write(AUX_MU_IO_REG, (unsigned int)ch);
 }
 
-void uart_writeText(char *buffer) {
+void uart_writeText(const char *buffer) {
     while (*buffer) {
        if (*buffer == '\n') uart_writeByteBlockingActual('\r');
        uart_writeByteBlockingActual(*buffer++);

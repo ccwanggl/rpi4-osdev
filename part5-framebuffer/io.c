@@ -145,7 +145,7 @@ void uart_writeByteBlocking(unsigned char ch) {
     uart_output_queue_write = next;
 }
 
-void uart_writeText(char *buffer) {
+void uart_writeText(const char *buffer) {
     while (*buffer) {
        if (*buffer == '\n') uart_writeByteBlocking('\r');
        uart_writeByteBlocking(*buffer++);
