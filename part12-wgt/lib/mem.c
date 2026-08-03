@@ -27,18 +27,18 @@ void mem_init()
 void *malloc(unsigned int size)
 {
    if (size > 0) {
-      void *allocated = freeptr;
+      unsigned char *allocated = freeptr;
       if ((long)allocated % 8 != 0) {
          allocated += 8 - ((long)allocated % 8);
       }
-    
-      if ((unsigned char *)(allocated + size) > HEAP_END) {
+
+      if (allocated + size > HEAP_END) {
          return 0;
       } else {
-         freeptr += size;
+         freeptr = allocated + size;
          bytes_allocated += size;
 
-         return allocated;
+         return (void *)allocated;
       }
    }
    return 0;
