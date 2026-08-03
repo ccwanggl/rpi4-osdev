@@ -91,7 +91,9 @@ void timer_init() {
 void handle_timer_1() {
     timer1_val += timer1_int;
     REGS_TIMER->compare[1] = timer1_val;
-    REGS_TIMER->control_status |= SYS_TIMER_IRQ_1;
+    // Write-1-to-clear register: only touch our own match bit, or we'd
+    // risk clearing timer 3's pending flag too
+    REGS_TIMER->control_status = TIMER_CS_M1;
 
     unsigned int progval = timer1_val / timer1_int;
     if (progval <= 100) {
@@ -105,7 +107,7 @@ void handle_timer_1() {
 void handle_timer_3() {
     timer3_val += timer3_int;
     REGS_TIMER->compare[3] = timer3_val;
-    REGS_TIMER->control_status |= SYS_TIMER_IRQ_3;
+    REGS_TIMER->control_status = TIMER_CS_M3;
 
     unsigned int progval = timer3_val / timer3_int;
     if (progval <= 100) drawProgress(3, progval);

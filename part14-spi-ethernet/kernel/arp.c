@@ -50,11 +50,11 @@ uint8_t routerMAC[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 // IP address to be assigned to the ENC28J60
 
-uint8_t deviceIP[4] = { 192, 168, 0, 66 };
+uint8_t deviceIP[4] = { 192, 168, 1, 66 };
 
 // IP Address of the router, whose hardware address we will find using the ARP request
 
-uint8_t routerIP[4] = { 192, 168, 0, 1 };
+uint8_t routerIP[4] = { 192, 168, 1, 1 };
 
 // HELPER FUNCTIONS
 
