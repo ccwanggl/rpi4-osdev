@@ -1,0 +1,47 @@
+CFILES = $(wildcard *.c lib/*.c wgt/*.c)
+SFILES = $(wildcard boot/*.S)
+OFILES = $(CFILES:.c=.o) $(SFILES:.S=.o)
+GCCFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -mstrict-align
+GCCPATH = ../../arm-gnu-toolchain-15.2.rel1-darwin-arm64-aarch64-none-elf/bin
+
+all: clean kernel8.img
+
+bin/BCM4345C0.o : bin/BCM4345C0.hcd
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/wgt1pal.o: bin/wgt1.pal
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/wgt1blk.o: bin/wgt1.blk
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/wgt2blk.o: bin/wgt2.blk
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/lettersspr.o: bin/letters.spr
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/breakspr.o: bin/break.spr
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/spacespr.o: bin/space.spr
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/invaderspr.o: bin/invader.spr
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+bin/mousespr.o: bin/mouse.spr
+	$(GCCPATH)/aarch64-none-elf-objcopy -I binary -O elf64-littleaarch64 -B aarch64 $< $@
+
+%.o: %.c
+	$(GCCPATH)/aarch64-none-elf-gcc $(GCCFLAGS) -c $< -o $@
+
+%.o: %.S
+	$(GCCPATH)/aarch64-none-elf-gcc $(GCCFLAGS) -c $< -o $@
+
+kernel8.img: $(OFILES) bin/BCM4345C0.o bin/wgt1pal.o bin/wgt1blk.o bin/wgt2blk.o bin/lettersspr.o bin/spacespr.o bin/invaderspr.o bin/mousespr.o bin/breakspr.o
+	$(GCCPATH)/aarch64-none-elf-ld -nostdlib --no-warn-rwx-segments $(OFILES) bin/BCM4345C0.o bin/wgt1pal.o bin/wgt1blk.o bin/wgt2blk.o bin/lettersspr.o bin/spacespr.o bin/invaderspr.o bin/mousespr.o bin/breakspr.o -T boot/link.ld -o kernel8.elf
+	$(GCCPATH)/aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+
+clean:
+	/bin/rm kernel8.elf *.o bin/*.o boot/*.o lib/*.o wgt/*.o *.img > /dev/null 2> /dev/null || true

@@ -13,7 +13,7 @@ all: clean kernel8.img
 	$(GCCPATH)/aarch64-none-elf-gcc $(GCCFLAGS) -c $< -o $@
 
 kernel8.img: $(OFILES)
-	$(GCCPATH)/aarch64-none-elf-ld -nostdlib $(OFILES) -T boot/link.ld -o kernel8.elf
+	$(GCCPATH)/aarch64-none-elf-ld -nostdlib --no-warn-rwx-segments $(OFILES) -T boot/link.ld -o kernel8.elf
 	$(GCCPATH)/aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
 
 clean:
